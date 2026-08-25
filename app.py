@@ -1,6 +1,6 @@
 import streamlit as st
 import ee
-import geemap.foliumap as geemap
+import geemap  # Changed from import geemap.foliumap as geemap
 import json
 
 st.set_page_config(page_title="Satellite Deforestation Tracker", layout="wide")
