@@ -1,6 +1,23 @@
 import streamlit as st
+import sys
+import types
+
+# ----------------------------------------------------
+# PYTHON 3.14 COMPATIBILITY PATCH FOR GEEMAP (MOCKING)
+# ----------------------------------------------------
+# Dynamically intercepting the missing 'pkg_resources' tool before geemap initializes
+try:
+    import pkg_resources
+except ModuleNotFoundError:
+    # Creating a virtual empty module space to satisfy older geemap background configurations
+    mock_pkg = types.ModuleType("pkg_resources")
+    mock_pkg.declare_namespace = lambda name: None
+    mock_pkg.get_distribution = lambda name: types.SimpleNamespace(version="0.1.0")
+    sys.modules["pkg_resources"] = mock_pkg
+
+# Now these can be imported safely without triggering a server crash
 import ee
-import geemap  # Changed from import geemap.foliumap as geemap
+import geemap
 import json
 
 st.set_page_config(page_title="Satellite Deforestation Tracker", layout="wide")
@@ -14,11 +31,11 @@ st.markdown("Monitoring canopy disruption in the **Mau Forest Complex, Kenya** v
 @st.cache_resource
 def initialize_ee_cloud():
     try:
-        # 1. Fetch credentials securely from Streamlit Cloud Secrets Manager
+        # Fetch credentials securely from Streamlit Cloud Secrets Manager
         gee_credentials = st.secrets["GEE_SECRET_KEY"]
         credentials_dict = json.loads(gee_credentials)
         
-        # 2. Authenticate the server via service account token
+        # Authenticate the server via service account token
         ee_creds = ee.ServiceAccountCredentials(credentials_dict['client_email'], key_data=gee_credentials)
         ee.Initialize(ee_creds, project=credentials_dict['project_id'])
     except Exception as e:
@@ -51,3 +68,4 @@ Map.addLayer(ndvi, {'min': 0, 'max': 1, 'palette': ndvi_palette}, 'NDVI Mask Vie
 
 # Render directly onto the web interface screen
 Map.to_streamlit(height=600)
+
