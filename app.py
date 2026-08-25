@@ -26,24 +26,41 @@ st.title("🌲 Space-Borne Canopy Index & Deforestation Tracker")
 st.markdown("Monitoring canopy disruption in the **Mau Forest Complex, Kenya** via automated Sentinel-2 satellite pipelines.")
 
 # ----------------------------------------------------
+
+# ----------------------------------------------------
 # SECURE SECRETS HANDSHAKE FOR GITHUB DEPLOYMENT
 # ----------------------------------------------------
 @st.cache_resource
 def initialize_ee_cloud():
     try:
-        # Fetch credentials securely from Streamlit Cloud Secrets Manager
+        # 1. Ingest the single-line layout directly from Streamlit configuration
         gee_credentials = st.secrets["GEE_SECRET_KEY"]
         credentials_dict = json.loads(gee_credentials)
         
-        # Authenticate the server via service account token
-        ee_creds = ee.ServiceAccountCredentials(credentials_dict['client_email'], key_data=gee_credentials)
+        # 2. Extract and format the raw RSA block to guarantee standard line endings
+        raw_key = credentials_dict['private_key']
+        
+        # Ensure newlines within the key are handled correctly
+        if "\\n" in raw_key:
+            formatted_key = raw_key.replace("\\n", "\n")
+        else:
+            formatted_key = raw_key
+
+        # 3. Authenticate the server via a service account token passing the formatted key string directly
+        ee_creds = ee.ServiceAccountCredentials(
+            email=credentials_dict['client_email'], 
+            key_data=formatted_key
+        )
+        
+        # 4. Bind authentication directly to your project ID
         ee.Initialize(ee_creds, project=credentials_dict['project_id'])
+        st.sidebar.success("🔒 Cloud Authentication Handshake Verified!")
+        
     except Exception as e:
         st.error(f"Authentication Failed. Ensure Streamlit Secrets are configured. Error: {e}")
 
 initialize_ee_cloud()
 
-# ----------------------------------------------------
 # DATA PIPELINE & INTERACTIVE WIDGET MAP RENDER
 # ----------------------------------------------------
 @st.cache_data
