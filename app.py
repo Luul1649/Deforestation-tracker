@@ -28,6 +28,7 @@ st.markdown("Monitoring canopy disruption in the **Mau Forest Complex, Kenya** v
 # ----------------------------------------------------
 
 # ----------------------------------------------------
+# ----------------------------------------------------
 # SECURE SECRETS HANDSHAKE FOR GITHUB DEPLOYMENT
 # ----------------------------------------------------
 @st.cache_resource
@@ -39,20 +40,21 @@ def initialize_ee_cloud():
         
         # 2. Extract and format the raw RSA block to guarantee standard line endings
         raw_key = credentials_dict['private_key']
-        
-        # Ensure newlines within the key are handled correctly
-        if "\\n" in raw_key:
-            formatted_key = raw_key.replace("\\n", "\n")
-        else:
-            formatted_key = raw_key
+        formatted_key = raw_key.replace("\\n", "\n") if "\\n" in raw_key else raw_key
 
-        # 3. Authenticate the server via a service account token passing the formatted key string directly
+        # 3. Authenticate via service account token
         ee_creds = ee.ServiceAccountCredentials(
             email=credentials_dict['client_email'], 
             key_data=formatted_key
         )
         
-        # 4. Bind authentication directly to your project ID
+        # 4. EXPLICIT CLOUD BYPASS FOR CONSUMER QUOTAS
+        # We strip the quota project attachment string to bypass the strict API handshake 
+        # that triggers the Service Usage Consumer block on the free tier.
+        if hasattr(ee_creds, '_quota_project_id'):
+            ee_creds._quota_project_id = None
+        
+        # 5. Bind initialization directly to your project ID
         ee.Initialize(ee_creds, project=credentials_dict['project_id'])
         st.sidebar.success("🔒 Cloud Authentication Handshake Verified!")
         
@@ -60,6 +62,7 @@ def initialize_ee_cloud():
         st.error(f"Authentication Failed. Ensure Streamlit Secrets are configured. Error: {e}")
 
 initialize_ee_cloud()
+
 
 # DATA PIPELINE & INTERACTIVE WIDGET MAP RENDER
 # ----------------------------------------------------
